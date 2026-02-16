@@ -2,7 +2,7 @@
 
 use std::async_iter::AsyncIterator;
 use std::env::args_os;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::future;
 use std::path::PathBuf;
 use std::pin::Pin;
@@ -13,6 +13,7 @@ use std::time::Duration;
 use heph::actor_ref::{ActorRef, SendError};
 use heph::supervisor::SupervisorStrategy;
 use heph::{actor, actor_fn, from_message};
+use heph_rt::access::SubmissionQueue;
 use heph_rt::fs::notify::{self, Interest, Recursive};
 use heph_rt::io::{Read, stdin};
 use heph_rt::process::{self, To};
@@ -307,7 +308,8 @@ async fn process_actor(
     clear_screen: bool,
     restart: bool,
 ) -> Result<(), String> {
-    let mut process: Option<process::WaitId> = None;
+    let sq = ctx.runtime().sq();
+    let mut process = Some(start_process(sq.clone(), &cmd, &cmd_args, clear_screen)?);
     while let Ok(msg) = ctx.receive_next().await {
         match msg {
             ProcessMessage::Start => {
@@ -325,21 +327,7 @@ async fn process_actor(
                         continue;
                     }
                 }
-
-                if clear_screen {
-                    crate::clear_screen();
-                }
-
-                let child = Command::new(&cmd)
-                    .args(cmd_args.iter())
-                    .stdin(Stdio::null())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit())
-                    .spawn()
-                    .map_err(|err| format!("failed to start process: {err}"))?;
-                process = Some(
-                    process::wait_on(ctx.runtime().sq(), &child).flags(process::WaitOption::EXITED),
-                )
+                process = Some(start_process(sq.clone(), &cmd, &cmd_args, clear_screen)?);
             }
             ProcessMessage::Signal(signal) => {
                 send_signal(&mut process, signal).await?;
@@ -353,6 +341,25 @@ async fn process_actor(
     send_signal(&mut process, process::Signal::INTERRUPT).await?;
 
     Ok(())
+}
+
+fn start_process(
+    sq: SubmissionQueue,
+    cmd: &OsStr,
+    cmd_args: &[OsString],
+    clear_screen: bool,
+) -> Result<process::WaitId, String> {
+    if clear_screen {
+        crate::clear_screen();
+    }
+    let child = Command::new(cmd)
+        .args(cmd_args.iter())
+        .stdin(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .map_err(|err| format!("failed to start process: {err}"))?;
+    Ok(process::wait_on(sq, &child).flags(process::WaitOption::EXITED))
 }
 
 async fn send_signal(
