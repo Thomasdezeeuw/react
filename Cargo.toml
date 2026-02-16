@@ -1,0 +1,14 @@
+[package]
+name = "react"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+heph       = { version = "0.5.0", default-features = false, git = "https://github.com/Thomasdezeeuw/heph.git", rev = "f9db8933ff2ebb7ae754c5dc79c0fb6689f969ae" }
+heph-rt    = { version = "0.5.0", default-features = false, git = "https://github.com/Thomasdezeeuw/heph.git", rev = "f9db8933ff2ebb7ae754c5dc79c0fb6689f969ae" }
+libc       = { version = "0.2.182", default-features = false }
+log        = { version = "0.4.29", default-features = false }
+std-logger = { version = "0.5.8", default-features = false }
+
+#[patch.'https://github.com/Thomasdezeeuw/a10.git']
+#a10 = { git = "ssh://git@github.com/Thomasdezeeuw/a10.git", rev = "a594c4bc7631e92529fcc0e04dff3f3d3c76ab8b" }
