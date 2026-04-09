@@ -185,7 +185,7 @@ async fn fs_watcher(
             if let Ok(path) = path.canonicalize() {
                 // Only watch directories as file are already watched due to use
                 // watching the parent directory.
-                if let Err(err) = events.watch_directory(path.clone(), interest, Recursive::All) {
+                if let Err(err) = events.watch(path.clone(), interest, Recursive::All) {
                     if err.kind() != io::ErrorKind::NotADirectory {
                         log::error!(
                             "failed to watch path '{}': {err}, not watching it",
