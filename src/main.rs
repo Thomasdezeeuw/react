@@ -180,7 +180,7 @@ async fn fs_watcher(
         let path = events.path_for(&event);
         log::debug!("fs notification for path '{}': {event:?})", path.display());
 
-        if event.file_created() {
+        if event.file_created() || event.file_moved_into() {
             // Watch newly created directories.
             if let Ok(path) = path.canonicalize() {
                 // Only watch directories as file are already watched due to use
